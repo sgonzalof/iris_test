@@ -3,6 +3,7 @@ import speech_recognition as sr
 import pygame
 import subprocess
 from gtts import gTTS
+from gtts.tts import gTTSError
 from io import BytesIO
 from typing import Optional
 from ...domain.ports.speech_recognition_port import SpeechRecognitionPort
@@ -31,7 +32,7 @@ class SpeechRecognitionAdapter(SpeechRecognitionPort):
         try:
             with self._microphone as source:
                 print("\nEscuchando...")
-                audio = self._recognizer.listen(source, timeout=3, phrase_time_limit=5)
+                audio = self._recognizer.listen(source, timeout=3, phrase_time_limit=8)
                 
                 print("Procesando audio...")
                 text = self._recognizer.recognize_google(audio, language="es-ES")
@@ -52,7 +53,17 @@ class SpeechRecognitionAdapter(SpeechRecognitionPort):
             return SpeechInput(text="", confidence=0.0)
 
     def speak(self, output: SpeechOutput) -> None:
-        """Convert text to speech and play it"""
+        """
+        Convert text to speech and play it using gTTS and pygame.
+        
+        Args:
+            output (SpeechOutput): Object containing text to be spoken
+            
+        Raises:
+            gTTSError: If there's an error generating speech from text
+            pygame.error: If there's an error playing the audio
+            IOError: If there's an error handling the audio file
+        """
 
         gTTS.GOOGLE_TTS_MAX_CHARS = 1000 
         
@@ -77,17 +88,27 @@ class SpeechRecognitionAdapter(SpeechRecognitionPort):
 
                 audio_file = BytesIO(res)
 
-                pygame.mixer.music.load(audio_file)
-                pygame.mixer.music.play()
-
-                while pygame.mixer.music.get_busy():
-                    pygame.time.wait(100)
-
-            
-
-
-        except subprocess.CalledProcessError as e:
-            print(f"Error during audio processing: {e.stderr.decode()}")
+                                # Load and play audio
+                try:
+                    pygame.mixer.music.load(audio_file)
+                    pygame.mixer.music.play()
+                    
+                    # Wait for playback to finish
+                    while pygame.mixer.music.get_busy():
+                        pygame.time.wait(100)
+                        
+                except pygame.error as e:
+                    print(f"Error playing audio: {str(e)}")
+                finally:
+                    try:
+                        pygame.mixer.music.unload()
+                    except pygame.error as e:
+                        print(f"Error unloading audio: {str(e)}")
+                        
+        except gTTSError as e:
+            print(f"Error generating speech: {str(e)}")
+        except IOError as e:
+            print(f"Error handling audio file: {str(e)}")
 
 
         #     try:

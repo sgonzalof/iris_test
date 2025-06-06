@@ -1,4 +1,9 @@
 from dataclasses import dataclass
+
+from browser.application.use_cases.google import GoogleSearchRequest, GoogleSearchUseCase
+#from browser.application.use_cases.amazon_music import AmazonMusicSearchRequest
+from browser.application.use_cases.youtube import YouTubeSearchRequest, YouTubeSearchUseCase
+from browser.infrastructure.adapters.browser_adapter import BrowserAdapter
 from ...domain.ports.speech_recognition_port import SpeechRecognitionPort
 from ...domain.ports.command_processor_port import CommandProcessorPort
 from ...domain.value_objects.speech_output import SpeechOutput
@@ -27,6 +32,9 @@ class ProcessVoiceCommandUseCase:
         self._weather_service = GetWeatherUseCase(
             OpenWeatherAdapter(config)
         )
+        self._browser = BrowserAdapter()
+        self._youtube_search = YouTubeSearchUseCase(self._browser)
+        self._google_search = GoogleSearchUseCase(self._browser)    
 
     def execute(self) -> ProcessVoiceCommandResponse:
         try:
@@ -45,7 +53,6 @@ class ProcessVoiceCommandUseCase:
                     f"No se reconoció ningún comando en: {speech_input.text}"
                 )
 
-        # ...resto del código...
             # 3. Ejecutar acción según el intent
             response = self._execute_command(command)
 
@@ -73,7 +80,20 @@ class ProcessVoiceCommandUseCase:
                 case "time":
                     response = self._get_time.execute()
                     return response.format_time()
+                case "google_search":
+                    request = GoogleSearchRequest(
+                        query=command.parameters["query"],
+                        description="Búsqueda en Google"
+                    )
+                    return self._google_search.execute(request)
+
+                case "youtube_search":
+                    request = YouTubeSearchRequest(query=command.parameters["query"])
+                    return self._youtube_search.execute(request)
+                # case "amazon_music_search":
+                #     request = AmazonMusicSearchRequest(query=command.parameters["query"])
+                #     return self._amazon_music_search.execute(request)
                 case _:
-                    return "Comando no reconocido"
+                    return print(f"Comando no reconocido: {command.intent}")
         except Exception as e:
             return f"Error procesando el comando: {str(e)}"

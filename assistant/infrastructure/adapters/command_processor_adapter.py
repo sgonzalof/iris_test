@@ -8,13 +8,26 @@ from ...domain.value_objects.comand import Command
 class CommandProcessorAdapter(CommandProcessorPort):
     def __init__(self):
         self._command_patterns = {
-            r"(?:busca|reproduce|pon).*?(?:en )?youtube ([\w\s]+)": ("youtube", lambda m: {"query": m.group(1).strip()}),
-            r"busca.*?(?:en )?google ([\w\s]+)": ("google", lambda m: {"query": m.group(1).strip()}),
-            r"(?:qué|dime)?.*?(?:hora|hora es).*?": lambda m: ("time", {}),
+            # Comando de YouTube
+            r"(?:busca|reproduce|pon).*?(?:en )?youtube ([\w\s]+)": 
+                lambda m: ("youtube_search", {"query": m.group(1).strip()}),
+            
+            # Comando de Google
+            r"busca.*?(?:en )?google ([\w\s]+)": 
+                lambda m: ("google_search", {"query": m.group(1).strip()}),
+            
+            # Comando de hora
+            r"(?:qué|dime)?.*?(?:hora|hora es).*?": 
+                lambda m: ("time", {}),
+            
+            # Comando del tiempo
             r"(?:qué )?tiempo.*?(?:en|de) ([\w\s]+?)(?:\s+(?:el|para el)\s+(\d{1,2})(?:\s+de\s+(\w+))?)?$": 
-                self._process_weather_command
-        }
-
+                self._process_weather_command,
+            
+            # Comando de Amazon Music
+            r"(?:busca|reproduce|pon).*?(?:en )?amazon music ([\w\s]+)": 
+                lambda m: ("amazon_music_search", {"query": m.group(1).strip()})
+        } 
         
     def process(self, speech_input: SpeechInput) -> Command:
         text = speech_input.text.lower()
